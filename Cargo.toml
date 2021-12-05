@@ -1,0 +1,16 @@
+[package]
+name = "glib-serde"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+glib-serde-derive = { path = "glib-serde-derive" }
+glib = { git = "https://github.com/gtk-rs/gtk-rs-core" }
+gio = { git = "https://github.com/gtk-rs/gtk-rs-core" }
+serde = "1"
+
+[dev-dependencies]
+serde = { version = "1", features = ["derive"] }
+
+[workspace]
+members = ["glib-serde-derive"]

@@ -4,32 +4,38 @@ use std::{
     collections::{BTreeMap, HashMap},
 };
 
-#[derive(Clone)]
-pub struct VariantTypeNode {
-    ty: Cow<'static, glib::VariantTy>,
-    child_tys: Vec<Cow<'static, VariantTypeNode>>,
+#[derive(Clone, Debug)]
+pub struct VariantTypeNode<'t> {
+    ty: Cow<'t, glib::VariantTy>,
+    child_tys: Vec<Cow<'t, VariantTypeNode<'t>>>,
 }
 
-impl VariantTypeNode {
+impl<'t> VariantTypeNode<'t> {
+    pub(crate) const fn new_static(ty: &'t glib::VariantTy) -> Self {
+        Self {
+            ty: Cow::Borrowed(ty),
+            child_tys: Vec::new(),
+        }
+    }
     pub fn new(
-        ty: Cow<'static, glib::VariantTy>,
-        child_tys: impl IntoIterator<Item = Cow<'static, VariantTypeNode>>,
+        ty: Cow<'t, glib::VariantTy>,
+        child_tys: impl IntoIterator<Item = Cow<'t, VariantTypeNode<'t>>>,
     ) -> Self {
         Self {
             ty,
             child_tys: Vec::from_iter(child_tys),
         }
     }
-    pub fn type_(&self) -> &Cow<'static, glib::VariantTy> {
+    pub fn type_(&self) -> &Cow<'t, glib::VariantTy> {
         &self.ty
     }
-    pub fn child_types(&self) -> &[Cow<'static, VariantTypeNode>] {
+    pub fn child_types(&self) -> &[Cow<'t, VariantTypeNode<'t>>] {
         &self.child_tys
     }
 }
 
 pub trait VariantType: glib::StaticVariantType {
-    fn variant_type() -> Cow<'static, VariantTypeNode> {
+    fn variant_type() -> Cow<'static, VariantTypeNode<'static>> {
         Cow::Owned(VariantTypeNode::new(Self::static_variant_type(), []))
     }
 }
@@ -50,13 +56,13 @@ impl VariantType for String {}
 impl VariantType for str {}
 
 impl<'a, T: ?Sized + VariantType> VariantType for &'a T {
-    fn variant_type() -> Cow<'static, VariantTypeNode> {
+    fn variant_type() -> Cow<'static, VariantTypeNode<'static>> {
         T::variant_type()
     }
 }
 
 impl<T: VariantType> VariantType for Option<T> {
-    fn variant_type() -> Cow<'static, VariantTypeNode> {
+    fn variant_type() -> Cow<'static, VariantTypeNode<'static>> {
         let child_node = T::variant_type();
         let mut builder = glib::GStringBuilder::new("m");
         builder.append(child_node.type_().as_str());
@@ -69,7 +75,7 @@ impl<T: VariantType> VariantType for Option<T> {
 }
 
 impl<T: VariantType> VariantType for [T] {
-    fn variant_type() -> Cow<'static, VariantTypeNode> {
+    fn variant_type() -> Cow<'static, VariantTypeNode<'static>> {
         let child_node = T::variant_type();
         let mut builder = glib::GStringBuilder::new("a");
         builder.append(child_node.type_().as_str());
@@ -82,7 +88,7 @@ impl<T: VariantType> VariantType for [T] {
 }
 
 impl<T: VariantType> VariantType for Vec<T> {
-    fn variant_type() -> Cow<'static, VariantTypeNode> {
+    fn variant_type() -> Cow<'static, VariantTypeNode<'static>> {
         <[T]>::variant_type()
     }
 }
@@ -90,19 +96,19 @@ impl<T: VariantType> VariantType for Vec<T> {
 impl<A: AsRef<[T]>, T: glib::FixedSizeVariantType + VariantType> VariantType
     for glib::FixedSizeVariantArray<A, T>
 {
-    fn variant_type() -> Cow<'static, VariantTypeNode> {
+    fn variant_type() -> Cow<'static, VariantTypeNode<'static>> {
         <[T]>::variant_type()
     }
 }
 
 impl<K: VariantType, V: VariantType> VariantType for DictEntry<K, V> {
-    fn variant_type() -> Cow<'static, VariantTypeNode> {
+    fn variant_type() -> Cow<'static, VariantTypeNode<'static>> {
         let key_node = K::variant_type();
         let value_node = V::variant_type();
-        let mut builder = glib::GStringBuilder::new("(");
+        let mut builder = glib::GStringBuilder::new("{");
         builder.append(key_node.type_().as_str());
         builder.append(value_node.type_().as_str());
-        builder.append_c(')');
+        builder.append_c('}');
         let ty = glib::VariantType::from_string(builder.into_string()).unwrap();
         Cow::Owned(VariantTypeNode::new(
             Cow::Owned(ty),
@@ -112,7 +118,7 @@ impl<K: VariantType, V: VariantType> VariantType for DictEntry<K, V> {
 }
 
 impl<K: VariantType, V: VariantType> VariantType for HashMap<K, V> {
-    fn variant_type() -> Cow<'static, VariantTypeNode> {
+    fn variant_type() -> Cow<'static, VariantTypeNode<'static>> {
         let child_node = <DictEntry<K, V>>::variant_type();
         let mut builder = glib::GStringBuilder::new("a");
         builder.append(child_node.type_().as_str());
@@ -125,7 +131,7 @@ impl<K: VariantType, V: VariantType> VariantType for HashMap<K, V> {
 }
 
 impl<K: VariantType, V: VariantType> VariantType for BTreeMap<K, V> {
-    fn variant_type() -> Cow<'static, VariantTypeNode> {
+    fn variant_type() -> Cow<'static, VariantTypeNode<'static>> {
         <HashMap<K, V>>::variant_type()
     }
 }
@@ -137,7 +143,7 @@ macro_rules! tuple_impls {
             where
                 $($name: VariantType,)+
             {
-                fn variant_type() -> Cow<'static, VariantTypeNode> {
+                fn variant_type() -> Cow<'static, VariantTypeNode<'static>> {
                     Cow::Owned(VariantTypeNode::new(
                         <Self as glib::StaticVariantType>::static_variant_type(),
                         [$($name::variant_type()),+],

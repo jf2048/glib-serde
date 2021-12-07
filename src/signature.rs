@@ -1,65 +1,85 @@
 use crate::VariantType;
 
-pub(crate) const STRUCT_NAME: &str = "glib_serde::$ObjectPath";
+pub(crate) const STRUCT_NAME: &str = "glib_serde::$Signature";
 
 /// Wrapper object for [`Variant`](struct@glib::Variant)s of type
-/// [`OBJECT_PATH`](glib::VariantTy::OBJECT_PATH).
+/// [`SIGNATURE`](glib::VariantTy::SIGNATURE).
 #[repr(transparent)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct ObjectPath(glib::GString);
+pub struct Signature(glib::VariantType);
 
-unsafe impl Send for ObjectPath {}
-unsafe impl Sync for ObjectPath {}
+unsafe impl Send for Signature {}
+unsafe impl Sync for Signature {}
 
-impl ObjectPath {
+impl Signature {
     pub fn new(s: impl Into<glib::GString>) -> Result<Self, glib::BoolError> {
         let s = s.into();
-        let valid = unsafe { glib::ffi::g_variant_is_object_path(s.as_ptr() as *const _) };
+        let valid = unsafe { glib::ffi::g_variant_is_signature(s.as_ptr() as *const _) };
         if valid == glib::ffi::GFALSE {
-            Err(glib::bool_error!("Invalid object path: {}", s))
+            Err(glib::bool_error!("Invalid signature: {}", s))
         } else {
-            Ok(Self(s))
+            Ok(Self(glib::VariantType::from_string(s)?))
         }
     }
-    pub unsafe fn new_unchecked(s: impl Into<glib::GString>) -> Self {
-        Self(s.into())
-    }
-    pub fn as_str(&self) -> &str {
+}
+
+impl std::ops::Deref for Signature {
+    type Target = glib::VariantTy;
+
+    fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl glib::StaticVariantType for ObjectPath {
-    fn static_variant_type() -> std::borrow::Cow<'static, glib::VariantTy> {
-        std::borrow::Cow::Borrowed(glib::VariantTy::OBJECT_PATH)
+impl From<glib::VariantType> for Signature {
+    fn from(ty: glib::VariantType) -> Self {
+        Self(ty)
     }
 }
 
-impl glib::ToVariant for ObjectPath {
+impl From<&glib::VariantTy> for Signature {
+    fn from(ty: &glib::VariantTy) -> Self {
+        Self(ty.to_owned())
+    }
+}
+
+impl From<Signature> for glib::VariantType {
+    fn from(sig: Signature) -> Self {
+        sig.0
+    }
+}
+
+impl glib::StaticVariantType for Signature {
+    fn static_variant_type() -> std::borrow::Cow<'static, glib::VariantTy> {
+        std::borrow::Cow::Borrowed(glib::VariantTy::SIGNATURE)
+    }
+}
+
+impl glib::ToVariant for Signature {
     fn to_variant(&self) -> glib::Variant {
         unsafe {
-            glib::translate::from_glib_none(glib::ffi::g_variant_new_object_path(
+            glib::translate::from_glib_none(glib::ffi::g_variant_new_signature(
                 self.0.as_ptr() as *const _
             ))
         }
     }
 }
 
-impl glib::FromVariant for ObjectPath {
+impl glib::FromVariant for Signature {
     fn from_variant(variant: &glib::Variant) -> Option<Self> {
         variant.str().and_then(|s| Self::new(s).ok())
     }
 }
 
-impl VariantType for ObjectPath {}
+impl VariantType for Signature {}
 
-impl std::fmt::Display for ObjectPath {
+impl std::fmt::Display for Signature {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         self.0.fmt(f)
     }
 }
 
-impl serde::ser::Serialize for ObjectPath {
+impl serde::ser::Serialize for Signature {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::ser::Serializer,
@@ -68,7 +88,7 @@ impl serde::ser::Serialize for ObjectPath {
     }
 }
 
-impl<'de> serde::de::Deserialize<'de> for ObjectPath {
+impl<'de> serde::de::Deserialize<'de> for Signature {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::de::Deserializer<'de>,
@@ -76,10 +96,10 @@ impl<'de> serde::de::Deserialize<'de> for ObjectPath {
         struct StrVisitor;
 
         impl<'de> serde::de::Visitor<'de> for StrVisitor {
-            type Value = ObjectPath;
+            type Value = Signature;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("a valid D-Bus object path")
+                formatter.write_str("a valid D-Bus signature")
             }
 
             fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
@@ -87,7 +107,7 @@ impl<'de> serde::de::Deserialize<'de> for ObjectPath {
                 E: serde::de::Error,
             {
                 use serde::de::Error;
-                ObjectPath::new(v).map_err(|e| Error::custom(e.to_string()))
+                Signature::new(v).map_err(|e| Error::custom(e.to_string()))
             }
         }
 

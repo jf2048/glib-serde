@@ -12,6 +12,7 @@ pub enum Error {
     InvalidTag(glib::VariantType),
     UnsupportedType(glib::VariantType),
     ExpectedChar(String),
+    InvalidType(String),
     LengthMismatch { actual: usize, expected: usize },
     Custom(String),
 }
@@ -28,21 +29,13 @@ impl Display for Error {
                     "Type mismatch: Expected 's', 'o', or 'g', got '{}'",
                     actual
                 )
-            },
+            }
             Self::InvalidTag(actual) => {
-                write!(
-                    f,
-                    "Invalid enum tag type: '{}'",
-                    actual
-                )
-            },
+                write!(f, "Invalid enum tag type: '{}'", actual)
+            }
             Self::UnsupportedType(actual) => {
-                write!(
-                    f,
-                    "Type not supported: '{}'",
-                    actual
-                )
-            },
+                write!(f, "Type not supported: '{}'", actual)
+            }
             Self::ExpectedChar(s) => {
                 write!(
                     f,
@@ -50,15 +43,17 @@ impl Display for Error {
                     s
                 )
             }
+            Self::InvalidType(s) => {
+                write!(f, "Invalid GVariant type string: {}", s)
+            }
             Self::LengthMismatch { actual, expected } => {
                 write!(
                     f,
                     "Struct/tuple length mismatch: Expected {}, got {}",
-                    expected,
-                    actual
+                    expected, actual
                 )
-            },
-            Self::Custom(e) => e.fmt(f)
+            }
+            Self::Custom(e) => e.fmt(f),
         }
     }
 }

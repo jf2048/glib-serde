@@ -1,4 +1,7 @@
-use crate::{prelude::*, Variant};
+use serde::ser::SerializeMap;
+
+use crate::{prelude::*, Variant, VariantTypeNode};
+use std::borrow::Cow;
 
 #[repr(transparent)]
 pub struct VariantDict(glib::VariantDict);
@@ -23,12 +26,19 @@ impl Default for VariantDict {
 }
 
 impl glib::StaticVariantType for VariantDict {
-    fn static_variant_type() -> std::borrow::Cow<'static, glib::VariantTy> {
+    fn static_variant_type() -> Cow<'static, glib::VariantTy> {
         <glib::VariantDict as glib::StaticVariantType>::static_variant_type()
     }
 }
 
-impl super::VariantType for VariantDict {}
+impl super::VariantType for VariantDict {
+    fn variant_type() -> Cow<'static, VariantTypeNode<'static>> {
+        Cow::Owned(VariantTypeNode::new(
+            <Self as glib::StaticVariantType>::static_variant_type(),
+            [String::variant_type(), Variant::variant_type()],
+        ))
+    }
+}
 
 impl glib::ToVariant for VariantDict {
     fn to_variant(&self) -> glib::Variant {
@@ -65,7 +75,17 @@ impl serde::ser::Serialize for VariantDict {
     where
         S: serde::ser::Serializer,
     {
-        self.end().as_serializable().serialize(serializer)
+        let v = self.end();
+        let count = v.n_children();
+        let mut seq = serializer.serialize_map(Some(count))?;
+        for i in 0..count {
+            let entry = v.child_value(i);
+            let key = entry.child_value(0);
+            let key = key.str().unwrap();
+            let value = entry.child_value(1).as_variant().unwrap();
+            seq.serialize_entry(&key, &value.as_serializable())?;
+        }
+        seq.end()
     }
 }
 
@@ -99,4 +119,3 @@ impl<'de> serde::de::Deserialize<'de> for VariantDict {
         deserializer.deserialize_map(MapVisitor).map(|d| d.into())
     }
 }
-

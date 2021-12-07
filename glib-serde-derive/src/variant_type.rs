@@ -1,16 +1,26 @@
-use proc_macro2::{TokenStream, Span};
+use proc_macro2::{Span, TokenStream};
 use proc_macro_error::abort;
 use quote::quote;
 
 pub fn impl_variant_type(input: syn::DeriveInput) -> TokenStream {
     let crate_path = super::crate_path();
     let mut repr_attr = None;
+    let mut index_attr = None;
     for attr in &input.attrs {
-        if attr.path.is_ident("glib_serde_repr") {
-            if repr_attr.is_some() {
-                abort!(attr, "Duplicate `glib_serde_repr` attribute");
+        let is_index = attr.path.is_ident("glib_serde_variant_index");
+        let is_repr = attr.path.is_ident("glib_serde_repr");
+        if is_index || is_repr {
+            if repr_attr.is_some() || index_attr.is_some() {
+                abort!(
+                    attr,
+                    "Only one of `glib_serde_variant_index` or `glib_serde_repr` may be specified"
+                );
             }
-            repr_attr.replace(attr);
+            if is_index {
+                index_attr.replace(attr);
+            } else if is_repr {
+                repr_attr.replace(attr);
+            }
         }
     }
     let (static_type, node_type, children) = match &input.data {
@@ -19,19 +29,21 @@ pub fn impl_variant_type(input: syn::DeriveInput) -> TokenStream {
                 abort!(attr, "`glib_serde_repr` attribute not allowed on struct");
             }
             impl_for_fields(&crate_path, &s.fields)
-        },
+        }
         syn::Data::Enum(e) => {
-            let repr = repr_attr.is_some().then(|| {
-                input.attrs.iter().find_map(|attr| {
-                    attr.path.is_ident("repr").then(|| {
-                        get_repr(attr)
-                            .unwrap_or_else(|| {
-                                abort!(attr, "`repr` attribute must specify integer type to use `glib_serde_repr`");
-                            })
-                    })
-                }).unwrap_or_else(|| syn::Ident::new("u64", Span::call_site()))
-            });
-            let (tag, tag_str) = repr.map(tag_for_repr)
+            let (tag, tag_str) = repr_attr
+                .map(|_| {
+                    input.attrs.iter().find_map(|attr| {
+                        attr.path.is_ident("repr").then(|| {
+                            get_repr(attr)
+                                .unwrap_or_else(|| {
+                                    abort!(attr, "`repr` attribute must specify integer type to use `glib_serde_repr`");
+                                })
+                        })
+                    }).unwrap_or_else(|| syn::Ident::new("i64", Span::call_site()))
+                })
+                .map(tag_for_repr)
+                .or_else(|| index_attr.map(|_| (quote! { UINT32 }, "u")))
                 .unwrap_or_else(|| (quote! { STRING }, "s"));
             let tag = quote! { #crate_path::glib::VariantTy::#tag };
             let has_data = e
@@ -90,7 +102,7 @@ pub fn impl_variant_type(input: syn::DeriveInput) -> TokenStream {
         }
 
         impl #impl_generics #crate_path::VariantType for #name #ty_generics #where_clause {
-            fn variant_type() -> ::std::borrow::Cow<'static, #crate_path::VariantTypeNode> {
+            fn variant_type() -> ::std::borrow::Cow<'static, #crate_path::VariantTypeNode<'static>> {
                 #variant_type
             }
         }
@@ -172,21 +184,21 @@ fn get_repr(attr: &syn::Attribute) -> Option<syn::Ident> {
     let meta = attr.parse_meta().ok()?;
     let list = match &meta {
         syn::Meta::List(list) => list,
-        _ => return None
+        _ => return None,
     };
     let first = list.nested.first()?;
     let first_meta = match &first {
         syn::NestedMeta::Meta(first_meta) => first_meta,
-        _ => return None
+        _ => return None,
     };
     match &first_meta {
         syn::Meta::Path(_) => (),
-        _ => return None
+        _ => return None,
     };
     let ty = first_meta.path().get_ident()?;
     match ty.to_string().as_str() {
         "i8" | "i16" | "i32" | "i64" | "u8" | "u16" | "u32" | "u64" => Some(ty.clone()),
-        _ => None
+        _ => None,
     }
 }
 
@@ -199,6 +211,6 @@ fn tag_for_repr(ident: syn::Ident) -> (TokenStream, &'static str) {
         "u16" => (quote! { UINT16 }, "q"),
         "u32" => (quote! { UINT32 }, "u"),
         "u64" => (quote! { UINT64 }, "t"),
-        _ => unimplemented!()
+        _ => unimplemented!(),
     }
 }

@@ -1,3 +1,4 @@
+mod enums;
 mod variant_type;
 
 use proc_macro::TokenStream;
@@ -14,9 +15,37 @@ fn crate_path() -> proc_macro2::TokenStream {
     }
 }
 
-#[proc_macro_derive(VariantType, attributes(glib_serde_repr))]
+#[proc_macro_derive(VariantType, attributes(glib_serde_repr, glib_serde_variant_index))]
 #[proc_macro_error]
 pub fn variant_type_derive(input: TokenStream) -> TokenStream {
     let input = syn::parse_macro_input!(input as syn::DeriveInput);
     variant_type::impl_variant_type(input).into()
+}
+
+#[proc_macro_derive(EnumDeserialize, attributes(glib_serde_repr))]
+#[proc_macro_error]
+pub fn enum_deserialize_derive(input: TokenStream) -> TokenStream {
+    let input = syn::parse_macro_input!(input as syn::DeriveInput);
+    enums::impl_enum_deserialize(input).into()
+}
+
+#[proc_macro_derive(EnumSerialize, attributes(glib_serde_repr))]
+#[proc_macro_error]
+pub fn enum_serialize_derive(input: TokenStream) -> TokenStream {
+    let input = syn::parse_macro_input!(input as syn::DeriveInput);
+    enums::impl_enum_serialize(input).into()
+}
+
+#[proc_macro_derive(FlagsDeserialize, attributes(glib_serde_repr))]
+#[proc_macro_error]
+pub fn flags_deserialize_derive(input: TokenStream) -> TokenStream {
+    let input = syn::parse_macro_input!(input as syn::DeriveInput);
+    enums::impl_flags_deserialize(input).into()
+}
+
+#[proc_macro_derive(FlagsSerialize, attributes(glib_serde_repr))]
+#[proc_macro_error]
+pub fn flags_serialize_derive(input: TokenStream) -> TokenStream {
+    let input = syn::parse_macro_input!(input as syn::DeriveInput);
+    enums::impl_flags_serialize(input).into()
 }

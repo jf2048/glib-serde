@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use glib::{ToVariant, VariantTy};
-use glib_serde::{prelude::*, to_variant, ObjectPath, Signature, VariantDict};
+use glib_serde::{prelude::VariantSerializeExt, to_variant, ObjectPath, Signature, VariantDict};
 
 #[test]
 fn serialize_basic_types() {

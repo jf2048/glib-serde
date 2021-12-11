@@ -24,6 +24,22 @@ impl std::fmt::Display for Variant {
     }
 }
 
+impl std::str::FromStr for Variant {
+    type Err = glib::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        glib::Variant::parse(None, s)
+            .and_then(|v| v.ok_or_else(|| unsafe {
+                from_glib_full(glib::ffi::g_error_new_literal(
+                    glib::ffi::g_variant_parse_error_quark(),
+                    glib::ffi::G_VARIANT_PARSE_ERROR_FAILED,
+                    format!("Type string `{}` parsed to NULL", s).to_glib_none().0,
+                ))
+            }))
+            .map(Into::into)
+    }
+}
+
 impl glib::StaticVariantType for Variant {
     fn static_variant_type() -> Cow<'static, VariantTy> {
         <glib::Variant as glib::StaticVariantType>::static_variant_type()
@@ -52,6 +68,7 @@ impl From<Variant> for glib::Variant {
 }
 
 pub trait GlibVariantExt {
+    fn parse(type_: Option<&VariantTy>, s: &str) -> Result<Option<glib::Variant>, glib::Error>;
     fn from_none(type_: &VariantTy) -> glib::Variant;
     fn from_some(value: &glib::Variant) -> glib::Variant;
     fn from_dict_entry(key: &glib::Variant, value: &glib::Variant) -> glib::Variant;
@@ -64,6 +81,28 @@ pub trait GlibVariantExt {
 }
 
 impl GlibVariantExt for glib::Variant {
+    fn parse(type_: Option<&VariantTy>, s: &str) -> Result<Option<glib::Variant>, glib::Error> {
+        if s.is_empty() {
+            return Ok(None);
+        }
+        let mut error = std::ptr::null_mut();
+        let end = &s[s.len()..];
+        unsafe {
+            let variant = glib::ffi::g_variant_parse(
+                type_.to_glib_none().0,
+                s.as_ptr() as *const _,
+                end.as_ptr() as *const _,
+                std::ptr::null_mut(),
+                &mut error
+            );
+            if error.is_null() {
+                Ok(from_glib_none(variant))
+            } else {
+                Err(from_glib_full(error))
+            }
+
+        }
+    }
     fn from_none(type_: &VariantTy) -> glib::Variant {
         unsafe {
             from_glib_none(glib::ffi::g_variant_new_maybe(

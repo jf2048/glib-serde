@@ -82,12 +82,38 @@ impl<'de> serde::de::Deserialize<'de> for ObjectPath {
                 formatter.write_str("a valid D-Bus object path")
             }
 
-            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            fn visit_newtype_struct<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
             where
-                E: serde::de::Error,
+                D: serde::Deserializer<'de>,
             {
-                use serde::de::Error;
-                ObjectPath::new(v).map_err(|e| Error::custom(e.to_string()))
+                let s = <String as serde::Deserialize>::deserialize(deserializer)?;
+                ObjectPath::new(s.clone())
+                    .map_err(|_| {
+                        serde::de::Error::invalid_value(
+                            serde::de::Unexpected::Str(&s),
+                            &self
+                        )
+                    })
+            }
+
+            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::SeqAccess<'de>,
+            {
+                let s = seq.next_element::<String>()?
+                    .ok_or_else(|| {
+                        serde::de::Error::invalid_length(
+                            0,
+                            &"tuple struct ObjectPath with 1 element"
+                        )
+                    })?;
+                ObjectPath::new(s.clone())
+                    .map_err(|_| {
+                        serde::de::Error::invalid_value(
+                            serde::de::Unexpected::Str(&s),
+                            &self
+                        )
+                    })
             }
         }
 

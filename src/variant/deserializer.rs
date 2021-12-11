@@ -191,34 +191,40 @@ impl<'de> de::Deserializer<'de> for &Variant {
     }
 
     fn deserialize_seq<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
-        self.is_of_type(VariantTy::ARRAY)?;
-        match self.type_().element().as_str() {
-            "y" => visitor.visit_seq(FixedSeqDeserializer::<'_, '_, u8>::new(self.fixed_array()?)),
-            "q" => visitor.visit_seq(FixedSeqDeserializer::<'_, '_, u16>::new(
-                self.fixed_array()?,
-            )),
-            "u" => visitor.visit_seq(FixedSeqDeserializer::<'_, '_, u32>::new(
-                self.fixed_array()?,
-            )),
-            "t" => visitor.visit_seq(FixedSeqDeserializer::<'_, '_, u64>::new(
-                self.fixed_array()?,
-            )),
-            "n" => visitor.visit_seq(FixedSeqDeserializer::<'_, '_, i16>::new(
-                self.fixed_array()?,
-            )),
-            "i" => visitor.visit_seq(FixedSeqDeserializer::<'_, '_, i32>::new(
-                self.fixed_array()?,
-            )),
-            "x" => visitor.visit_seq(FixedSeqDeserializer::<'_, '_, i64>::new(
-                self.fixed_array()?,
-            )),
-            "d" => visitor.visit_seq(FixedSeqDeserializer::<'_, '_, f64>::new(
-                self.fixed_array()?,
-            )),
-            "b" => visitor.visit_seq(FixedSeqDeserializer::<'_, '_, bool>::new(
-                self.fixed_array()?,
-            )),
-            _ => visitor.visit_seq(ContainerDeserializer::new(self)),
+        let ty = self.type_();
+        if ty.is_array() {
+            match ty.element().as_str() {
+                "y" => visitor.visit_seq(FixedSeqDeserializer::<'_, '_, u8>::new(self.fixed_array()?)),
+                "q" => visitor.visit_seq(FixedSeqDeserializer::<'_, '_, u16>::new(
+                    self.fixed_array()?,
+                )),
+                "u" => visitor.visit_seq(FixedSeqDeserializer::<'_, '_, u32>::new(
+                    self.fixed_array()?,
+                )),
+                "t" => visitor.visit_seq(FixedSeqDeserializer::<'_, '_, u64>::new(
+                    self.fixed_array()?,
+                )),
+                "n" => visitor.visit_seq(FixedSeqDeserializer::<'_, '_, i16>::new(
+                    self.fixed_array()?,
+                )),
+                "i" => visitor.visit_seq(FixedSeqDeserializer::<'_, '_, i32>::new(
+                    self.fixed_array()?,
+                )),
+                "x" => visitor.visit_seq(FixedSeqDeserializer::<'_, '_, i64>::new(
+                    self.fixed_array()?,
+                )),
+                "d" => visitor.visit_seq(FixedSeqDeserializer::<'_, '_, f64>::new(
+                    self.fixed_array()?,
+                )),
+                "b" => visitor.visit_seq(FixedSeqDeserializer::<'_, '_, bool>::new(
+                    self.fixed_array()?,
+                )),
+                _ => visitor.visit_seq(ContainerDeserializer::new(self)),
+            }
+        } else if ty.is_tuple() {
+            visitor.visit_seq(ContainerDeserializer::new(self))
+        } else {
+            Err(Error::UnsupportedType(ty.to_owned()))
         }
     }
 
@@ -239,11 +245,18 @@ impl<'de> de::Deserializer<'de> for &Variant {
 
     fn deserialize_tuple_struct<V: Visitor<'de>>(
         self,
-        _name: &'static str,
+        name: &'static str,
         len: usize,
         visitor: V,
     ) -> Result<V::Value, Self::Error> {
-        self.deserialize_tuple(len, visitor)
+        if name == super::STRUCT_NAME {
+            self.is_of_type(VariantTy::VARIANT)?;
+            assert_eq!(len, 2);
+            let inner = self.as_variant().unwrap();
+            visitor.visit_seq(VariantDeserializer::new(inner.as_serializable()))
+        } else {
+            self.deserialize_tuple(len, visitor)
+        }
     }
 
     fn deserialize_map<V: Visitor<'de>>(self, visitor: V) -> Result<V::Value, Self::Error> {
@@ -460,6 +473,43 @@ impl<'v, 'de, V: FixedSizeVariantType + IntoDeserializer<'de, Error>> de::SeqAcc
 
     fn size_hint(&self) -> Option<usize> {
         Some(self.input.len() - self.index - 1)
+    }
+}
+
+struct VariantDeserializer<'v> {
+    input: &'v Variant,
+    index: usize,
+}
+
+impl<'v> VariantDeserializer<'v> {
+    fn new(input: &'v Variant) -> Self {
+        Self { input, index: 0 }
+    }
+}
+
+impl<'v, 'de> de::SeqAccess<'de> for VariantDeserializer<'v> {
+    type Error = Error;
+
+    fn next_element_seed<T>(&mut self, seed: T) -> Result<Option<T::Value>, Self::Error>
+    where
+        T: de::DeserializeSeed<'de>,
+    {
+        match self.index {
+            0 => {
+                self.index += 1;
+                let deserializer = self.input.type_().as_str().into_deserializer();
+                seed.deserialize(deserializer).map(Some)
+            },
+            1 => {
+                self.index += 1;
+                seed.deserialize(self.input).map(Some)
+            },
+            _ => Ok(None)
+        }
+    }
+
+    fn size_hint(&self) -> Option<usize> {
+        Some(self.input.n_children() - self.index - 1)
     }
 }
 

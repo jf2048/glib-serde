@@ -22,24 +22,24 @@ mod variant_type;
 pub use variant_type::*;
 
 pub mod prelude {
-    pub use super::variant::VariantSerializeExt;
+    pub use super::variant::{GlibVariantExt, VariantSerializeExt};
 
     pub trait ToVariantExt {
-        fn to_variant(&self) -> glib::Variant;
+        fn serialize_to_variant(&self) -> glib::Variant;
     }
 
     impl<T: serde::Serialize + super::VariantType> ToVariantExt for T {
-        fn to_variant(&self) -> glib::Variant {
+        fn serialize_to_variant(&self) -> glib::Variant {
             super::to_variant(self).unwrap()
         }
     }
 
     pub trait FromVariantExt<'t, T> {
-        fn from_variant(variant: &'t glib::Variant) -> Option<T>;
+        fn deserialize_from_variant(variant: &'t glib::Variant) -> Option<T>;
     }
 
     impl<'de, T: serde::Deserialize<'de>> FromVariantExt<'de, T> for T {
-        fn from_variant(variant: &'de glib::Variant) -> Option<T> {
+        fn deserialize_from_variant(variant: &'de glib::Variant) -> Option<T> {
             super::from_variant(variant).ok()
         }
     }

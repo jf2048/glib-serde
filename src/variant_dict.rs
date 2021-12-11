@@ -100,7 +100,7 @@ impl<'de> serde::de::Deserialize<'de> for VariantDict {
             type Value = glib::VariantDict;
 
             fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("a valid map")
+                formatter.write_str("a valid VariantDict map")
             }
 
             fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
@@ -109,13 +109,14 @@ impl<'de> serde::de::Deserialize<'de> for VariantDict {
             {
                 let dict = glib::VariantDict::new(None);
 
-                while let Some((key, value)) = map.next_entry::<_, Variant>()? {
-                    dict.insert_value(key, &value);
+                while let Some((key, value)) = map.next_entry::<String, Variant>()? {
+                    dict.insert_value(&key, &value);
                 }
-                todo!()
+
+                Ok(dict)
             }
         }
 
-        deserializer.deserialize_map(MapVisitor).map(|d| d.into())
+        deserializer.deserialize_map(MapVisitor).map(Into::into)
     }
 }

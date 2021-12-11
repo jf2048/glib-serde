@@ -23,7 +23,8 @@ pub fn impl_variant_type(input: syn::DeriveInput) -> TokenStream {
             }
         }
     }
-    let (static_type, node_type, children) = match &input.data {
+    let name = &input.ident;
+    let (static_type, node) = match &input.data {
         syn::Data::Struct(s) => {
             if let Some(attr) = repr_attr {
                 abort!(attr, "#[glib_serde_repr] attribute not allowed on struct");
@@ -34,7 +35,7 @@ pub fn impl_variant_type(input: syn::DeriveInput) -> TokenStream {
                     "#[glib_serde_variant_index] attribute not allowed on struct"
                 );
             }
-            impl_for_fields(&crate_path, &s.fields)
+            impl_for_fields(&crate_path, name, &s.fields)
         }
         syn::Data::Enum(e) => {
             let (tag, tag_str) = repr_attr
@@ -56,29 +57,41 @@ pub fn impl_variant_type(input: syn::DeriveInput) -> TokenStream {
             if has_data {
                 let static_type_str = format!("({}v)", tag_str);
                 let children = e.variants.iter().map(|variant| {
-                    let (_, node_type, children) = impl_for_fields(&crate_path, &variant.fields);
-                    quote! { #crate_path::VariantTypeNode::new(#node_type, #children) }
+                    let (_, node) = impl_for_fields(&crate_path, name, &variant.fields);
+                    node
                 });
                 (
-                    impl_lazy(
-                        &crate_path,
-                        quote! { #crate_path::glib::VariantTy },
-                        quote! {
+                    quote! {
+                        ::std::borrow::Cow::Borrowed(
                             unsafe {
                                 #crate_path::glib::VariantTy::from_str_unchecked(#static_type_str)
                             }
-                        },
-                    ),
-                    quote! {
-                        <Self as #crate_path::glib::StaticVariantType>::static_variant_type()
+                        )
                     },
-                    quote! { [ #(#children),* ] },
+                    impl_lazy(
+                        &crate_path,
+                        quote! { #crate_path::VariantTypeNode },
+                        quote! {
+                            #crate_path::VariantTypeNode::new(
+                                <#name as #crate_path::glib::StaticVariantType>::static_variant_type(),
+                                [ #(#children),* ],
+                            )
+                        },
+                    )
                 )
             } else {
                 (
                     quote! { ::std::borrow::Cow::Borrowed(#tag) },
-                    quote! { ::std::borrow::Cow::Borrowed(#tag) },
-                    quote! { &[] },
+                    impl_lazy(
+                        &crate_path,
+                        quote! { #crate_path::VariantTypeNode },
+                        quote! {
+                            #crate_path::VariantTypeNode::new(
+                                ::std::borrow::Cow::Borrowed(#tag),
+                                []
+                            )
+                        },
+                    )
                 )
             }
         }
@@ -89,13 +102,7 @@ pub fn impl_variant_type(input: syn::DeriveInput) -> TokenStream {
             );
         }
     };
-    let name = &input.ident;
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
-    let variant_type = impl_lazy(
-        &crate_path,
-        quote! { #crate_path::VariantTypeNode },
-        quote! { #crate_path::VariantTypeNode::new(#node_type, #children) },
-    );
 
     quote! {
         impl #impl_generics #crate_path::glib::StaticVariantType for #name #ty_generics #where_clause {
@@ -106,7 +113,7 @@ pub fn impl_variant_type(input: syn::DeriveInput) -> TokenStream {
 
         impl #impl_generics #crate_path::VariantType for #name #ty_generics #where_clause {
             fn variant_type() -> ::std::borrow::Cow<'static, #crate_path::VariantTypeNode<'static>> {
-                #variant_type
+                #node
             }
         }
     }
@@ -114,23 +121,24 @@ pub fn impl_variant_type(input: syn::DeriveInput) -> TokenStream {
 
 fn impl_for_fields(
     crate_path: &TokenStream,
+    name: &syn::Ident,
     fields: &syn::Fields,
-) -> (TokenStream, TokenStream, TokenStream) {
+) -> (TokenStream, TokenStream) {
     match fields {
         syn::Fields::Named(_) | syn::Fields::Unnamed(_) => {
             let types = fields.iter().map(|f| &f.ty);
-            let (static_type, node_type) = if fields.len() == 1 {
+            if fields.len() == 1 {
                 let ty = &fields.iter().next().unwrap().ty;
                 (
                     quote! {
                         <#ty as glib::StaticVariantType>::static_variant_type()
                     },
                     quote! {
-                        <#ty as #crate_path::VariantType>::variant_type().type_()
+                        <#ty as #crate_path::VariantType>::variant_type()
                     },
                 )
             } else {
-                let types = types.clone();
+                let types2 = types.clone();
                 (
                     impl_lazy(
                         crate_path,
@@ -150,35 +158,45 @@ fn impl_for_fields(
                             }
                         },
                     ),
-                    quote! {
-                        <Self as #crate_path::glib::StaticVariantType>::static_variant_type()
-                    },
+                    impl_lazy(
+                        crate_path,
+                        quote! { #crate_path::VariantTypeNode },
+                        quote! {
+                            #crate_path::VariantTypeNode::new(
+                                <#name as #crate_path::glib::StaticVariantType>::static_variant_type(),
+                                [
+                                    #(
+                                        <#types2 as #crate_path::VariantType>::variant_type()
+                                     ),*
+                                ]
+                            )
+                        },
+                    )
                 )
-            };
-            (
-                static_type,
-                node_type,
-                quote! {
-                    [
-                        #(
-                            <#types as #crate_path::VariantType>::variant_type()
-                         ),*
-                    ]
-                },
-            )
+            }
         }
         syn::Fields::Unit => (
             quote! { ::std::borrow::Cow::Borrowed(#crate_path::glib::VariantTy::UNIT) },
-            quote! { ::std::borrow::Cow::Borrowed(#crate_path::glib::VariantTy::UNIT) },
-            quote! { [] },
+            impl_lazy(
+                crate_path,
+                quote! { #crate_path::VariantTypeNode },
+                quote! {
+                    #crate_path::VariantTypeNode::new(
+                        ::std::borrow::Cow::Borrowed(#crate_path::glib::VariantTy::UNIT),
+                        []
+                    )
+                },
+            )
         ),
     }
 }
 
 fn impl_lazy(crate_path: &TokenStream, ty: TokenStream, value: TokenStream) -> TokenStream {
     quote! {
-        static TYP: #crate_path::glib::once_cell::sync::Lazy<#ty>
-            = #crate_path::glib::once_cell::sync::Lazy::new(|| #value);
-        ::std::borrow::Cow::Borrowed(&*TYP)
+        {
+            static TYP: #crate_path::glib::once_cell::sync::Lazy<#ty>
+                = #crate_path::glib::once_cell::sync::Lazy::new(|| #value);
+            ::std::borrow::Cow::Borrowed(&*TYP)
+        }
     }
 }

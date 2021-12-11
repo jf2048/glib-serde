@@ -33,7 +33,7 @@ impl<'de> Visitor<'de> for VariantVisitor {
     {
         let tag = seq
             .next_element::<String>()?
-            .ok_or_else(|| de::Error::invalid_length(0, &"tuple struct with 2 elements"))?;
+            .ok_or_else(|| de::Error::invalid_length(0, &"tuple struct Variant with 2 elements"))?;
         let ty = VariantTy::new(&tag).map_err(de::Error::custom)?;
         if !ty.is_definite() {
             return Err(de::Error::custom("Type must be definite"));
@@ -41,7 +41,7 @@ impl<'de> Visitor<'de> for VariantVisitor {
         let seed = VariantDeserializeInput(ty);
         let value = seq
             .next_element_seed(seed)?
-            .ok_or_else(|| de::Error::invalid_length(1, &"tuple struct with 2 elements"))?;
+            .ok_or_else(|| de::Error::invalid_length(1, &"tuple struct Variant with 2 elements"))?;
         Ok(value)
     }
 }
@@ -94,7 +94,7 @@ impl<'t, 'de> DeserializeSeed<'de> for VariantDeserializeInput<'t> {
         } else if ty.is_maybe() {
             deserializer.deserialize_option(visitor)
         } else if ty.is_variant() {
-            Variant::deserialize(deserializer).map(Into::into)
+            Variant::deserialize(deserializer).map(|v| v.to_variant().into())
         } else {
             Err(de::Error::custom(Error::UnsupportedType(ty.to_owned())))
         }

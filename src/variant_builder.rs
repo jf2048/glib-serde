@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021 Jason Francis <jafrancis999@gmail.com>
+// SPDX-License-Identifier: MIT
+
 use glib::{ffi, translate::*, ToVariant, Variant, VariantTy};
 use std::{marker::PhantomData, mem::MaybeUninit, ptr::NonNull};
 

@@ -1,7 +1,12 @@
+// SPDX-FileCopyrightText: 2021 Jason Francis <jafrancis999@gmail.com>
+// SPDX-License-Identifier: MIT
+
 use std::collections::HashMap;
 
 use glib::{ToVariant, VariantTy};
-use glib_serde::{prelude::*, from_variant, to_variant, ObjectPath, Signature, Variant, VariantDict};
+use glib_serde::{
+    from_variant, prelude::*, to_variant, ObjectPath, Signature, Variant, VariantDict,
+};
 
 #[test]
 fn serialize_basic_types() {
@@ -261,7 +266,10 @@ fn deserialize_container_types() {
     let s = "<('Hello', 'World')>";
     let value: Variant = from_variant(&s.parse::<Variant>().unwrap()).unwrap();
     assert_eq!(value.type_(), "(ss)");
-    assert_eq!(value.get::<(String, String)>().unwrap(), ("Hello".into(), "World".into()));
+    assert_eq!(
+        value.get::<(String, String)>().unwrap(),
+        ("Hello".into(), "World".into())
+    );
 
     let s = "<{int64 1: 'Hello'}>";
     let value: Variant = from_variant(&s.parse::<Variant>().unwrap()).unwrap();

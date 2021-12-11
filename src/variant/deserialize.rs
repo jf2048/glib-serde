@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021 Jason Francis <jafrancis999@gmail.com>
+// SPDX-License-Identifier: MIT
+
 use super::{GlibVariantExt, Variant};
 use crate::{
     object_path, signature, Error, ObjectPath, Signature, VariantBuilder, VariantBuilderExt,
@@ -94,7 +97,7 @@ impl<'t, 'de> DeserializeSeed<'de> for VariantDeserializeInput<'t> {
         } else if ty.is_maybe() {
             deserializer.deserialize_option(visitor)
         } else if ty.is_variant() {
-            Variant::deserialize(deserializer).map(|v| v.to_variant().into())
+            Variant::deserialize(deserializer).map(|v| v.to_variant())
         } else {
             Err(de::Error::custom(Error::UnsupportedType(ty.to_owned())))
         }

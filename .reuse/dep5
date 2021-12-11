@@ -1,0 +1,8 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: glib-serde
+Upstream-Contact: Jason Francis <jafrancis999@gmail.com>
+Source: https://github.com/jf2048/glib-serde
+
+Files: .gitignore Cargo.toml **/Cargo.toml README.md
+Copyright: Jason Francis <jafrancis999@gmail.com>
+License: MIT

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021 Jason Francis <jafrancis999@gmail.com>
+// SPDX-License-Identifier: MIT
+
 use crate::{VariantBuilder, VariantBuilderExt, VariantType};
 use glib::{translate::*, variant::VariantTypeMismatchError, VariantTy};
 use std::{borrow::Cow, ops::Deref};
@@ -36,13 +39,17 @@ impl std::str::FromStr for Variant {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         glib::Variant::parse(None, s)
-            .and_then(|v| v.ok_or_else(|| unsafe {
-                from_glib_full(glib::ffi::g_error_new_literal(
-                    glib::ffi::g_variant_parse_error_quark(),
-                    glib::ffi::G_VARIANT_PARSE_ERROR_FAILED,
-                    format!("Type string `{}` parsed to NULL", s).to_glib_none().0,
-                ))
-            }))
+            .and_then(|v| {
+                v.ok_or_else(|| unsafe {
+                    from_glib_full(glib::ffi::g_error_new_literal(
+                        glib::ffi::g_variant_parse_error_quark(),
+                        glib::ffi::G_VARIANT_PARSE_ERROR_FAILED,
+                        format!("Type string `{}` parsed to NULL", s)
+                            .to_glib_none()
+                            .0,
+                    ))
+                })
+            })
             .map(Into::into)
     }
 }
@@ -102,14 +109,13 @@ impl GlibVariantExt for glib::Variant {
                 s.as_ptr() as *const _,
                 end.as_ptr() as *const _,
                 std::ptr::null_mut(),
-                &mut error
+                &mut error,
             );
             if error.is_null() {
                 Ok(from_glib_none(variant))
             } else {
                 Err(from_glib_full(error))
             }
-
         }
     }
     fn from_none(type_: &VariantTy) -> glib::Variant {
@@ -186,4 +192,3 @@ impl GlibVariantExt for glib::Variant {
         unsafe { &*(self as *const glib::Variant as *const Variant) }
     }
 }
-

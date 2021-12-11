@@ -1,8 +1,14 @@
+// SPDX-FileCopyrightText: 2021 Jason Francis <jafrancis999@gmail.com>
+// SPDX-License-Identifier: MIT
+
 use proc_macro2::TokenStream;
 use proc_macro_error::abort;
 use quote::quote;
 
-fn setup_and_get_repr_attr(input: &syn::DeriveInput, derive_name: TokenStream) -> Option<&syn::Attribute> {
+fn setup_and_get_repr_attr(
+    input: &syn::DeriveInput,
+    derive_name: TokenStream,
+) -> Option<&syn::Attribute> {
     match &input.data {
         syn::Data::Struct(s) => {
             abort!(

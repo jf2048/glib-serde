@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021 Jason Francis <jafrancis999@gmail.com>
+// SPDX-License-Identifier: MIT
+
 use proc_macro2::TokenStream;
 use proc_macro_error::abort;
 use quote::quote;
@@ -77,7 +80,7 @@ pub fn impl_variant_type(input: syn::DeriveInput) -> TokenStream {
                                 [ #(#children),* ],
                             )
                         },
-                    )
+                    ),
                 )
             } else {
                 (
@@ -91,7 +94,7 @@ pub fn impl_variant_type(input: syn::DeriveInput) -> TokenStream {
                                 []
                             )
                         },
-                    )
+                    ),
                 )
             }
         }
@@ -171,7 +174,7 @@ fn impl_for_fields(
                                 ]
                             )
                         },
-                    )
+                    ),
                 )
             }
         }
@@ -186,7 +189,7 @@ fn impl_for_fields(
                         []
                     )
                 },
-            )
+            ),
         ),
     }
 }

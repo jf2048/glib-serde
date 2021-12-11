@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021 Jason Francis <jafrancis999@gmail.com>
+// SPDX-License-Identifier: MIT
+
 use super::{GlibVariantExt, Variant};
 use crate::{object_path, signature};
 use glib::{VariantClass, VariantTy};

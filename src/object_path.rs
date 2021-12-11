@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021 Jason Francis <jafrancis999@gmail.com>
+// SPDX-License-Identifier: MIT
+
 use crate::VariantType;
 
 pub(crate) const STRUCT_NAME: &str = "glib_serde::$ObjectPath";
@@ -95,33 +98,21 @@ impl<'de> serde::de::Deserialize<'de> for ObjectPath {
                 D: serde::Deserializer<'de>,
             {
                 let s = <String as serde::Deserialize>::deserialize(deserializer)?;
-                ObjectPath::new(s.clone())
-                    .map_err(|_| {
-                        serde::de::Error::invalid_value(
-                            serde::de::Unexpected::Str(&s),
-                            &self
-                        )
-                    })
+                ObjectPath::new(s.clone()).map_err(|_| {
+                    serde::de::Error::invalid_value(serde::de::Unexpected::Str(&s), &self)
+                })
             }
 
             fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
             where
                 A: serde::de::SeqAccess<'de>,
             {
-                let s = seq.next_element::<String>()?
-                    .ok_or_else(|| {
-                        serde::de::Error::invalid_length(
-                            0,
-                            &"tuple struct ObjectPath with 1 element"
-                        )
-                    })?;
-                ObjectPath::new(s.clone())
-                    .map_err(|_| {
-                        serde::de::Error::invalid_value(
-                            serde::de::Unexpected::Str(&s),
-                            &self
-                        )
-                    })
+                let s = seq.next_element::<String>()?.ok_or_else(|| {
+                    serde::de::Error::invalid_length(0, &"tuple struct ObjectPath with 1 element")
+                })?;
+                ObjectPath::new(s.clone()).map_err(|_| {
+                    serde::de::Error::invalid_value(serde::de::Unexpected::Str(&s), &self)
+                })
             }
         }
 

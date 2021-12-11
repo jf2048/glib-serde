@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021 Jason Francis <jafrancis999@gmail.com>
+// SPDX-License-Identifier: MIT
+
 use super::{GlibVariantExt, Variant};
 use crate::Error;
 use glib::{FixedSizeVariantType, VariantClass, VariantTy};
@@ -195,7 +198,9 @@ impl<'de> de::Deserializer<'de> for &Variant {
         let ty = self.type_();
         if ty.is_array() {
             match ty.element().as_str() {
-                "y" => visitor.visit_seq(FixedSeqDeserializer::<'_, '_, u8>::new(self.fixed_array()?)),
+                "y" => {
+                    visitor.visit_seq(FixedSeqDeserializer::<'_, '_, u8>::new(self.fixed_array()?))
+                }
                 "q" => visitor.visit_seq(FixedSeqDeserializer::<'_, '_, u16>::new(
                     self.fixed_array()?,
                 )),
@@ -500,12 +505,12 @@ impl<'v, 'de> de::SeqAccess<'de> for VariantDeserializer<'v> {
                 self.index += 1;
                 let deserializer = self.input.type_().as_str().into_deserializer();
                 seed.deserialize(deserializer).map(Some)
-            },
+            }
             1 => {
                 self.index += 1;
                 seed.deserialize(self.input).map(Some)
-            },
-            _ => Ok(None)
+            }
+            _ => Ok(None),
         }
     }
 

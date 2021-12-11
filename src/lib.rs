@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: 2021 Jason Francis <jafrancis999@gmail.com>
+// SPDX-License-Identifier: MIT
+
 //! # Serde support for GLib types in gtk-rs-core
 //!
 //! Supports serializing arbitrary types to/from [`glib::Variant`](struct@glib::Variant) using

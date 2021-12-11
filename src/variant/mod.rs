@@ -11,6 +11,7 @@ pub use serializer::*;
 
 const STRUCT_NAME: &str = "glib_serde::$Variant";
 
+/// Wrapper type for [`glib::Variant`](struct@glib::Variant).
 #[derive(Clone, Debug, Hash, Eq, PartialEq, PartialOrd)]
 #[repr(transparent)]
 pub struct Variant(glib::Variant);
@@ -20,7 +21,13 @@ unsafe impl Sync for Variant {}
 
 impl std::fmt::Display for Variant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.0.fmt(f)
+        let serialized: glib::GString = unsafe {
+            from_glib_full(glib::ffi::g_variant_print(
+                self.0.to_glib_none().0,
+                true.into_glib(),
+            ))
+        };
+        f.write_str(&serialized)
     }
 }
 
@@ -67,6 +74,7 @@ impl From<Variant> for glib::Variant {
     }
 }
 
+/// Extra methods for [`glib::Variant`](struct@glib::Variant).
 pub trait GlibVariantExt {
     fn parse(type_: Option<&VariantTy>, s: &str) -> Result<Option<glib::Variant>, glib::Error>;
     fn from_none(type_: &VariantTy) -> glib::Variant;
@@ -78,6 +86,7 @@ pub trait GlibVariantExt {
     ) -> glib::Variant;
     fn is_of_type(&self, ty: &VariantTy) -> Result<(), VariantTypeMismatchError>;
     fn maybe(&self) -> Option<Option<glib::Variant>>;
+    fn as_serializable(&self) -> &Variant;
 }
 
 impl GlibVariantExt for glib::Variant {
@@ -173,14 +182,8 @@ impl GlibVariantExt for glib::Variant {
             }
         })
     }
-}
-
-pub trait VariantSerializeExt {
-    fn as_serializable(&self) -> &Variant;
-}
-
-impl VariantSerializeExt for glib::Variant {
     fn as_serializable(&self) -> &Variant {
         unsafe { &*(self as *const glib::Variant as *const Variant) }
     }
 }
+

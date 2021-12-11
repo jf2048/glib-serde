@@ -2,9 +2,33 @@ use proc_macro2::TokenStream;
 use proc_macro_error::abort;
 use quote::quote;
 
-fn get_glib_serde_repr_attr(input: &syn::DeriveInput) -> Option<&syn::Attribute> {
+fn setup_and_get_repr_attr(input: &syn::DeriveInput, derive_name: TokenStream) -> Option<&syn::Attribute> {
+    match &input.data {
+        syn::Data::Struct(s) => {
+            abort!(
+                s.struct_token,
+                "#[derive(glib_serde::{})] is not available for structs",
+                derive_name
+            );
+        }
+        syn::Data::Union(u) => {
+            abort!(
+                u.union_token,
+                "#[derive(glib_serde::{})] is not available for unions",
+                derive_name
+            );
+        }
+        syn::Data::Enum(_) => (),
+    };
     let mut repr_attr = None;
     for attr in &input.attrs {
+        if attr.path.is_ident("glib_serde_variant_index") {
+            abort!(
+                attr,
+                "#[glib_serde_variant_index] cannot be used with #[derive(glib_serde::{})]",
+                derive_name
+            );
+        }
         let is_repr = attr.path.is_ident("glib_serde_repr");
         if is_repr {
             if repr_attr.is_some() {
@@ -13,43 +37,22 @@ fn get_glib_serde_repr_attr(input: &syn::DeriveInput) -> Option<&syn::Attribute>
             repr_attr.replace(attr);
         }
     }
-    repr_attr
-}
-
-fn get_repr_attr(input: &syn::DeriveInput) -> Option<&syn::Attribute> {
-    for attr in &input.attrs {
-        if attr.path.is_ident("repr") {
-            return Some(attr);
+    if repr_attr.is_some() {
+        for attr in &input.attrs {
+            if attr.path.is_ident("repr") {
+                abort!(attr, "#[glib_serde_repr] cannot be used with #[repr]");
+            }
         }
     }
-    None
+    repr_attr
 }
 
 pub fn impl_enum_serialize(input: syn::DeriveInput) -> TokenStream {
     let ident = &input.ident;
     let crate_path = super::crate_path();
-    match &input.data {
-        syn::Data::Struct(s) => {
-            abort!(
-                s.struct_token,
-                "#[derive(glib_serde::EnumSerialize)] is not available for structs"
-            );
-        }
-        syn::Data::Union(u) => {
-            abort!(
-                u.union_token,
-                "#[derive(glib_serde::EnumSerialize)] is not available for unions"
-            );
-        }
-        syn::Data::Enum(_) => (),
-    };
-    let repr_attr = get_glib_serde_repr_attr(&input);
+    let repr_attr = setup_and_get_repr_attr(&input, quote! { EnumSerialize });
 
     let (getter, serialize) = if repr_attr.is_some() {
-        if let Some(attr) = get_repr_attr(&input) {
-            abort!(attr, "#[glib_serde_repr] cannot be used with #[repr]");
-        }
-
         (quote! { value }, quote! { serialize_i32 })
     } else {
         (quote! { nick }, quote! { serialize_str })
@@ -93,28 +96,9 @@ pub fn impl_enum_serialize(input: syn::DeriveInput) -> TokenStream {
 pub fn impl_enum_deserialize(input: syn::DeriveInput) -> TokenStream {
     let ident = &input.ident;
     let crate_path = super::crate_path();
-    match &input.data {
-        syn::Data::Struct(s) => {
-            abort!(
-                s.struct_token,
-                "#[derive(glib_serde::EnumDeserialize)] is not available for structs"
-            );
-        }
-        syn::Data::Union(u) => {
-            abort!(
-                u.union_token,
-                "#[derive(glib_serde::EnumDeserialize)] is not available for unions"
-            );
-        }
-        syn::Data::Enum(_) => (),
-    };
-    let repr_attr = get_glib_serde_repr_attr(&input);
+    let repr_attr = setup_and_get_repr_attr(&input, quote! { EnumDeseralize });
 
     let deserialize = if repr_attr.is_some() {
-        if let Some(attr) = get_repr_attr(&input) {
-            abort!(attr, "#[glib_serde_repr] cannot be used with #[repr]");
-        }
-
         quote! { deserialize_i32 }
     } else {
         quote! { deserialize_str }
@@ -247,28 +231,9 @@ pub fn impl_enum_deserialize(input: syn::DeriveInput) -> TokenStream {
 pub fn impl_flags_serialize(input: syn::DeriveInput) -> TokenStream {
     let ident = &input.ident;
     let crate_path = super::crate_path();
-    match &input.data {
-        syn::Data::Struct(s) => {
-            abort!(
-                s.struct_token,
-                "#[derive(glib_serde::FlagsSerialize)] is not available for structs"
-            );
-        }
-        syn::Data::Union(u) => {
-            abort!(
-                u.union_token,
-                "#[derive(glib_serde::FlagsSerialize)] is not available for unions"
-            );
-        }
-        syn::Data::Enum(_) => (),
-    };
-    let repr_attr = get_glib_serde_repr_attr(&input);
+    let repr_attr = setup_and_get_repr_attr(&input, quote! { FlagsSerialize });
 
     let serialize = if repr_attr.is_some() {
-        if let Some(attr) = get_repr_attr(&input) {
-            abort!(attr, "#[glib_serde_repr] cannot be used with #[repr]");
-        }
-
         quote! {
             serialize_u32(
                 <Self as #crate_path::glib::translate::IntoGlib>::into_glib(*self)
@@ -298,28 +263,9 @@ pub fn impl_flags_serialize(input: syn::DeriveInput) -> TokenStream {
 pub fn impl_flags_deserialize(input: syn::DeriveInput) -> TokenStream {
     let ident = &input.ident;
     let crate_path = super::crate_path();
-    match &input.data {
-        syn::Data::Struct(s) => {
-            abort!(
-                s.struct_token,
-                "#[derive(glib_serde::FlagsDeserialize)] is not available for structs"
-            );
-        }
-        syn::Data::Union(u) => {
-            abort!(
-                u.union_token,
-                "#[derive(glib_serde::FlagsDeserialize)] is not available for unions"
-            );
-        }
-        syn::Data::Enum(_) => (),
-    };
-    let repr_attr = get_glib_serde_repr_attr(&input);
+    let repr_attr = setup_and_get_repr_attr(&input, quote! { FlagsDeserialize });
 
     let deserialize = if repr_attr.is_some() {
-        if let Some(attr) = get_repr_attr(&input) {
-            abort!(attr, "#[glib_serde_repr] cannot be used with #[repr]");
-        }
-
         quote! { deserialize_u32 }
     } else {
         quote! { deserialize_str }

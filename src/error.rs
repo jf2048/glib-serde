@@ -2,7 +2,7 @@ use std::{fmt::Display, num::TryFromIntError};
 
 use glib::{variant::VariantTypeMismatchError, BoolError};
 
-/// Error type for deserialization and serialization
+/// Error type for deserialization and serialization.
 #[derive(Debug)]
 pub enum Error {
     Bool(BoolError),

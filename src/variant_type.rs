@@ -4,6 +4,7 @@ use std::{
     collections::{BTreeMap, HashMap},
 };
 
+/// A tree node that stores [`glib::VariantTy`]s for enum variants.
 #[derive(Clone, Debug)]
 pub struct VariantTypeNode<'t> {
     ty: Cow<'t, glib::VariantTy>,
@@ -34,6 +35,8 @@ impl<'t> VariantTypeNode<'t> {
     }
 }
 
+/// An extension of [`StaticVariantType`](glib::StaticVariantType) that can retreive types for enum
+/// variants.
 pub trait VariantType: glib::StaticVariantType {
     fn variant_type() -> Cow<'static, VariantTypeNode<'static>> {
         Cow::Owned(VariantTypeNode::new(Self::static_variant_type(), []))

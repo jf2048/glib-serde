@@ -3,6 +3,7 @@ use serde::ser::SerializeMap;
 use crate::{prelude::*, Variant, VariantTypeNode};
 use std::borrow::Cow;
 
+/// Wrapper type for [`glib::VariantDict`].
 #[repr(transparent)]
 pub struct VariantDict(glib::VariantDict);
 

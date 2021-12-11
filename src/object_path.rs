@@ -2,7 +2,7 @@ use crate::VariantType;
 
 pub(crate) const STRUCT_NAME: &str = "glib_serde::$ObjectPath";
 
-/// Wrapper object for [`Variant`](struct@glib::Variant)s of type
+/// Wrapper type for [`Variant`](struct@glib::Variant)s of type
 /// [`OBJECT_PATH`](glib::VariantTy::OBJECT_PATH).
 #[repr(transparent)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -56,6 +56,14 @@ impl VariantType for ObjectPath {}
 impl std::fmt::Display for ObjectPath {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+impl std::str::FromStr for ObjectPath {
+    type Err = glib::BoolError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::new(s)
     }
 }
 

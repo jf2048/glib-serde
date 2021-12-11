@@ -4,6 +4,7 @@ use glib::{
 };
 use std::marker::PhantomData;
 
+/// Wrapper type for FFI enums. Serializes as `str`.
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
 pub struct EnumValue<T: StaticType + FromGlib<i32> + IntoGlib<GlibType = i32>> {
     value: i32,
@@ -168,6 +169,7 @@ impl<'de, T: StaticType + FromGlib<i32> + IntoGlib<GlibType = i32>> serde::de::D
     }
 }
 
+/// Wrapper type for FFI enums. Serializes as `i32`.
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
 pub struct EnumReprValue<T: StaticType + FromGlib<i32> + IntoGlib<GlibType = i32>> {
     value: i32,
@@ -347,6 +349,7 @@ impl<'de, T: StaticType + FromGlib<i32> + IntoGlib<GlibType = i32>> serde::de::D
     }
 }
 
+/// Error type for [`EnumValue`].
 pub struct ParseEnumError {
     token: String,
 }

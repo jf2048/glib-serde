@@ -7,6 +7,7 @@ use serde::{
 };
 use std::{borrow::Cow, ops::Deref};
 
+/// Serializes `T` into a [`glib::Variant`](struct@glib::Variant).
 pub fn to_variant<T>(value: &T) -> Result<glib::Variant, Error>
 where
     T: Serialize + VariantType,

@@ -2,7 +2,7 @@ use crate::VariantType;
 
 pub(crate) const STRUCT_NAME: &str = "glib_serde::$Signature";
 
-/// Wrapper object for [`Variant`](struct@glib::Variant)s of type
+/// Wrapper type for [`Variant`](struct@glib::Variant)s of type
 /// [`SIGNATURE`](glib::VariantTy::SIGNATURE).
 #[repr(transparent)]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -31,15 +31,19 @@ impl std::ops::Deref for Signature {
     }
 }
 
-impl From<glib::VariantType> for Signature {
-    fn from(ty: glib::VariantType) -> Self {
-        Self(ty)
+impl TryFrom<glib::VariantType> for Signature {
+    type Error = glib::BoolError;
+
+    fn try_from(value: glib::VariantType) -> Result<Self, Self::Error> {
+        Self::new(value.as_str())
     }
 }
 
-impl From<&glib::VariantTy> for Signature {
-    fn from(ty: &glib::VariantTy) -> Self {
-        Self(ty.to_owned())
+impl TryFrom<&glib::VariantTy> for Signature {
+    type Error = glib::BoolError;
+
+    fn try_from(value: &glib::VariantTy) -> Result<Self, Self::Error> {
+        Self::new(value.as_str())
     }
 }
 
@@ -76,6 +80,14 @@ impl VariantType for Signature {}
 impl std::fmt::Display for Signature {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+impl std::str::FromStr for Signature {
+    type Err = glib::BoolError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Self::new(s)
     }
 }
 

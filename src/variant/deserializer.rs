@@ -1,4 +1,4 @@
-use super::{GlibVariantExt, Variant, VariantSerializeExt};
+use super::{GlibVariantExt, Variant};
 use crate::Error;
 use glib::{FixedSizeVariantType, VariantClass, VariantTy};
 use serde::{
@@ -6,6 +6,7 @@ use serde::{
     Deserialize, Deserializer,
 };
 
+/// Deserializes `T` from a [`glib::Variant`](struct@glib::Variant).
 pub fn from_variant<'de, T>(variant: &'de glib::Variant) -> Result<T, Error>
 where
     T: Deserialize<'de>,

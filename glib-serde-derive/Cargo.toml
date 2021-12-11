@@ -13,3 +13,5 @@ proc-macro-error = "1"
 quote = "1"
 syn = { version = "1", features = ["full"], default-features = false }
 
+[dev-dependencies]
+serde = { version = "1", features = ["derive"] }

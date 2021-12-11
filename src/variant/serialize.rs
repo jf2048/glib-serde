@@ -1,4 +1,4 @@
-use super::{GlibVariantExt, Variant, VariantSerializeExt};
+use super::{GlibVariantExt, Variant};
 use crate::{object_path, signature};
 use glib::{VariantClass, VariantTy};
 use serde::{

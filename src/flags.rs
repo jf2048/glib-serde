@@ -4,6 +4,7 @@ use glib::{
 };
 use std::marker::PhantomData;
 
+/// Wrapper type for FFI flags. Serializes as `str`.
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
 pub struct FlagsValue<T: StaticType + FromGlib<u32> + IntoGlib<GlibType = u32>> {
     value: u32,
@@ -181,6 +182,7 @@ impl<'de, T: StaticType + FromGlib<u32> + IntoGlib<GlibType = u32>> serde::de::D
     }
 }
 
+/// Wrapper type for FFI flags. Serializes as `u32`.
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash, Clone, Copy)]
 pub struct FlagsReprValue<T: StaticType + FromGlib<u32> + IntoGlib<GlibType = u32>> {
     value: u32,
@@ -374,6 +376,7 @@ impl<'de, T: StaticType + FromGlib<u32> + IntoGlib<GlibType = u32>> serde::de::D
     }
 }
 
+/// Error type for [`FlagsValue`].
 pub struct ParseFlagsError {
     token: String,
 }

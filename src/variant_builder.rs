@@ -96,6 +96,6 @@ impl SharedVariantBuilder {
 
 impl VariantBuilderExt for SharedVariantBuilder {
     fn as_ptr(&self) -> *mut ffi::GVariantBuilder {
-        self.0.to_glib_none().0
+        self.to_glib_none().0
     }
 }

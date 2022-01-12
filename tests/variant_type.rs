@@ -3,7 +3,7 @@
 
 use glib::{StaticVariantType, VariantTy};
 use glib_serde::{from_variant, prelude::*, to_variant, Variant};
-use std::{collections::HashMap, ops::Deref};
+use std::collections::HashMap;
 
 #[derive(Debug, PartialEq, Eq, glib_serde::VariantType, serde::Serialize, serde::Deserialize)]
 enum MyEnum {
@@ -125,8 +125,7 @@ fn serialize_structs() {
         cond: glib::IOCondition::IN.into(),
         cond_num: glib::IOCondition::IN.into(),
         path: "/org/glib_serde/test".parse().unwrap(),
-        sig: MyNewtypeStruct::static_variant_type()
-            .deref()
+        sig: (*MyNewtypeStruct::static_variant_type())
             .try_into()
             .unwrap(),
         var: (0i32, 1i32).serialize_to_variant().into(),

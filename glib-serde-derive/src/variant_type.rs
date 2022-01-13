@@ -152,7 +152,7 @@ fn impl_for_fields(
                                 #(
                                     {
                                         let typ = <#types as glib::StaticVariantType>::static_variant_type();
-                                        builder.append(typ.as_str());
+                                        builder.append(::std::borrow::Borrow::<#crate_path::glib::VariantTy>::borrow(&typ).as_str());
                                     }
                                  )*
                                 builder.append_c(')');
